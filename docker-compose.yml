@@ -1,0 +1,31 @@
+services:
+  paperrag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: paperrag:latest
+    container_name: paperrag-api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Vector index persists on the host, so re-running `docker compose up`
+      # doesn't lose everything you've ingested.
+      - paperrag-data:/app/data/chroma_db
+      # Model cache persists too, so containers don't re-download ~1GB of
+      # weights every time the container is recreated.
+      - paperrag-models:/app/.cache
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  paperrag-data:
+    driver: local
+  paperrag-models:
+    driver: local
